@@ -37,32 +37,66 @@ If you already have a webhook URL:
 slack-social-ai init "https://hooks.slack.com/services/T.../B.../xxx"
 ```
 
-## Usage
+## Using with AI Coding Agents
+
+The primary workflow for `slack-social-ai` is pairing it with an AI coding agent. The `guide` command outputs an LLM-optimized posting guide. When possible, load it directly into the agent's prompt via shell substitution `$(slack-social-ai guide)` so the agent has the full guide in context without needing to run a command.
+
+### Non-interactive
+
+The agent gets the guide inlined via shell substitution and posts autonomously:
 
 ```bash
-# Post a message
-slack-social-ai post "deploy completed"
+# Claude Code
+claude "Follow this guide and post an insight about what we worked on: $(slack-social-ai guide)"
 
-# Pipe from stdin
-echo "hello from CI" | slack-social-ai post
-
-# Wrap in a code block
-git diff --stat | slack-social-ai post --code
-
-# JSON output (for scripts and LLMs)
-slack-social-ai post "build done" --json
+# OpenCode
+opencode "Follow this guide and post an insight about what we worked on: $(slack-social-ai guide)"
 ```
 
-### Commands
+### Interactive
+
+The agent proposes posts and asks you to pick before publishing:
+
+```bash
+# Claude Code
+claude "Follow this guide, propose posts, ask before you post: $(slack-social-ai guide)"
+
+# OpenCode
+opencode "Follow this guide, propose posts, ask before you post: $(slack-social-ai guide)"
+```
+
+### What happens under the hood
+
+1. `$(slack-social-ai guide)` inlines the full posting guide directly into the agent's prompt
+2. The agent runs `slack-social-ai history` to check recent posts and avoid repeats
+3. The agent gathers context from session history, memory, and recent skills
+4. The agent drafts posts that fit the channel's voice -- concise, opinionated, technically precise
+5. **Interactive**: the agent proposes options and waits for you to pick one
+6. **Non-interactive**: the agent picks the best option and posts autonomously
+7. The agent runs `slack-social-ai post "..."` to publish
+
+## CLI Reference
 
 | Command | Description |
 |---------|-------------|
 | `init [<webhook-url>]` | Configure Slack webhook (interactive or direct) |
 | `post [<message>]` | Post a message to Slack |
 | `history [--clear]` | Show or manage post history |
-| `skill` | Print agent skill guide (for LLM consumption) |
+| `guide` | Print the posting guide (for LLM agents) |
 
-### Flags
+```bash
+# Load the guide directly into any command
+$(slack-social-ai guide)
+
+# Post a message
+slack-social-ai post "your insight here"
+
+# Check history
+slack-social-ai history
+
+# JSON output for scripts
+slack-social-ai post "deploy completed" --json
+```
 
 | Flag | Short | Scope | Description |
 |------|-------|-------|-------------|
@@ -71,130 +105,11 @@ slack-social-ai post "build done" --json
 | `--stdin` | | `post` | Force reading from stdin |
 | `--clear` | | `history` | Clear all history |
 
-### Exit Codes
-
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | Runtime error (network, Slack API, keychain) |
-| 2 | Not configured (run `init` first) |
-| 3 | Invalid input (empty message, bad args) |
-
-## Agent Skill
-
-The `skill` command prints an embedded guide that teaches AI agents how to compose high-quality engineering microblog posts:
-
-```bash
-slack-social-ai skill
-```
-
-The guide covers tone, post structure, Slack mrkdwn formatting (which differs from standard Markdown), topic and mood rotation, and concrete good/bad examples. It is embedded directly in the binary via `go:embed`, so it works offline with no network calls.
-
-This is the bridge between the CLI and AI agent workflows -- the agent reads the guide, learns the conventions, and then uses the `post` and `history` commands to compose and publish.
-
-## Using with AI Coding Agents
-
-The primary workflow for `slack-social-ai` is pairing it with an AI coding agent. The `skill` command outputs an LLM-optimized guide that any agent can read to learn how to compose posts.
-
-### Claude Code
-
-```bash
-# One-liner: read the skill and post
-claude -p "Run slack-social-ai skill to learn how to post, then share an insight about what we just worked on"
-
-# Interactive: in a Claude Code session
-> Run `slack-social-ai skill` to learn how to post, then share an insight about the refactoring we just did
-```
-
-To make it always available, add to your project's `CLAUDE.md`:
-
-```markdown
-## Slack Posting
-Run `slack-social-ai skill` for posting guidelines, then use `slack-social-ai post "..."` to publish.
-```
-
-Or register a custom slash command in `~/.claude/commands/`:
-
-```markdown
-# slack-post.md
-Run `slack-social-ai skill` to learn the posting conventions, check `slack-social-ai history` to avoid repeats, then compose and post an insight about: $ARGUMENTS
-```
-
-### Cursor
-
-In Cursor's Composer or Agent mode:
-
-```
-Run `slack-social-ai skill` in the terminal to learn how to post,
-then use `slack-social-ai post "..."` to share an insight about what we just worked on.
-```
-
-To make it persistent, add to `.cursor/rules/slack-post.mdc`:
-
-```yaml
----
-description: "Post engineering insights to Slack"
-alwaysApply: false
----
-Run `slack-social-ai skill` for posting guidelines. Use `slack-social-ai post "..."` to publish.
-Check `slack-social-ai history` first to avoid repeats and rotate topics.
-```
-
-### OpenCode
-
-```bash
-# One-liner
-opencode -p "Run slack-social-ai skill to learn how to post, then share an insight about what we just worked on"
-
-# Interactive: in an OpenCode session
-> Run `slack-social-ai skill` to learn how to post, then share an insight
-```
-
-To make it persistent, add to `AGENTS.md` or `CLAUDE.md` in your project root:
-
-```markdown
-## Slack Posting
-Run `slack-social-ai skill` for posting guidelines, then use `slack-social-ai post "..."` to publish.
-```
-
-### What happens under the hood
-
-1. `slack-social-ai skill` prints the full LLM-optimized guide to stdout
-2. The agent reads the guide and learns the posting conventions (tone, Slack mrkdwn, variety rules)
-3. The agent runs `slack-social-ai history` to check recent posts and avoid duplicate content or patterns
-4. The agent composes a post that fits the channel's voice -- concise, opinionated, technically precise
-5. The agent runs `slack-social-ai post "..."` to publish
-
-### Scripting and CI/CD
-
-The `--json` flag makes every command machine-readable, so you can integrate posting into automated workflows:
-
-```bash
-slack-social-ai post "deploy to prod completed" --json
-# {"status":"ok","message":"Message posted to Slack."}
-```
-
-```bash
-slack-social-ai history --json
-```
-
 ## Coming Soon
 
 - **Scheduled posts** -- configure recurring posts (daily/weekly) so your agent automatically shares insights on a cadence
 - **Multi-channel support** -- post to different Slack channels from the same CLI
 - **Block Kit formatting** -- rich message layouts with headers, dividers, and context blocks
-
-## JSON Output
-
-When using `--json`, output is machine-readable:
-
-```json
-{"status":"ok","message":"Message posted to Slack."}
-```
-
-```json
-{"status":"error","error":"not_configured","message":"Not configured. Run \"slack-social-ai init\" first."}
-```
 
 ## How It Works
 
@@ -202,7 +117,7 @@ When using `--json`, output is machine-readable:
 - **Slack API**: Posts via [incoming webhooks](https://api.slack.com/messaging/webhooks) (no bot token needed)
 - **CLI**: Built with [Kong](https://github.com/alecthomas/kong)
 - **Interactive UI**: Powered by [huh](https://github.com/charmbracelet/huh)
-- **Skill guide**: Embedded in the binary via `go:embed` -- no external files needed at runtime
+- **Posting guide**: Embedded in the binary via `go:embed` -- no external files needed at runtime
 
 ## Development
 

@@ -21,7 +21,7 @@ type CLI struct {
 	Init    InitCmd    `cmd:"" help:"Configure Slack webhook (interactive setup)."`
 	Post    PostCmd    `cmd:"" help:"Post a message to Slack."`
 	History HistoryCmd `cmd:"" help:"Show or manage post history."`
-	Skill   SkillCmd   `cmd:"" help:"Print agent skill instructions (for LLM consumption)."`
+	Guide   GuideCmd   `cmd:"" help:"Print the posting guide — designed for LLM agents to learn how to compose posts."`
 }
 
 func main() {

@@ -8,14 +8,25 @@ This guide is designed to work with any AI coding agent — Claude Code, Cursor,
 
 ## Workflow
 
-1. *Read history and gather context* — run `slack-social-ai history` and analyze the last 3-5 posts. Note the mood (serious/fun/hot take), topic (Go/Python/security/etc.), and structure (TIL/PSA/question/etc.) of each. This is your input for deciding what to write next. Also check your own session history or memory (see *Session Context* below) for recent work — debugging sessions, code reviews, refactors, and discoveries are great raw material for posts.
-   > **History file location:** `~/.local/share/slack-social-ai/history.json` — a JSON array of `{"ts": "<RFC3339>", "message": "<text>"}` objects (max 200, oldest dropped first).
-   > Preferred: `slack-social-ai history --json` (outputs the same format to stdout).
-   > Agents without CLI access can read the file directly.
-2. *Pick a lane* — based on the history analysis, deliberately choose a *different* mood, topic, and structure than recent posts. If the last 3 were serious Go TILs, your next post should be something like a fun AI observation or a Python hot take. Diversity is not optional.
-3. *Gather insight* — identify what's interesting in your chosen lane. Look for debugging discoveries, patterns that clicked, tools that surprised you, trade-offs worth sharing, or just something funny and relatable.
-4. *Compose* — write a concise post following the structure and formatting rules below
-5. *Post* — send it with `slack-social-ai post "your message"`
+> **ALWAYS gather context before composing.** Never skip steps 1-4. Posting without context leads to repetitive, generic content.
+
+### Gather context (do ALL of these)
+
+**What happened in your sessions** (find raw material):
+1. *Check recent conversations* — look at today's session files and conversation logs (see *Session Context* below). What did you work on? What bugs were debugged, what code was reviewed, what got refactored? These are your best raw material.
+2. *Check memory and learnings* — read your agent's memory files (MEMORY.md, CLAUDE.md, auto-memory). Look for recent insights, patterns discovered, or lessons learned that would make good posts.
+3. *Check recently added skills* — look at any skills or tools that were recently installed or configured. New capabilities, interesting configurations, or workflow improvements are great post material.
+
+**What was already posted** (avoid repeats):
+4. *Check post history* — run `slack-social-ai history` (use the CLI, do not read the history file directly). Read every recent post. Note the mood, topic, and structure of each. If any of your ideas overlap with recent posts — discard them and pick something different.
+
+### Compose and post
+
+> **Posts must come from real work.** Every post should be grounded in something that actually happened — a bug you debugged, a pattern you discovered, a tool you configured, a trade-off you evaluated. Never fabricate insights or make up examples. If nothing interesting happened today, don't post.
+
+5. *Pick a lane* — based on the context gathered above, deliberately choose a *different* mood, topic, and structure than recent posts. If the last 3 were serious Go TILs, your next post should be something like a fun AI observation or a Python hot take. Diversity is not optional.
+6. *Compose* — write a concise post following the structure and formatting rules below
+7. *Post* — send it with `slack-social-ai post "your message"`
 
 ## Session Context
 
@@ -41,9 +52,11 @@ Different agents store session history in different locations. Use this to find 
 
 ## Post Structure
 
-- *Hook line* (~280 chars): the insight, opinion, or discovery — standalone and compelling
-- *Body* (total ~500 chars): supporting context, the "why", or a concrete example
+- *Hook line*: emoji + bold headline — the scan hook readers see first
+- *Body* (total ~500 chars): 1-3 sentences of supporting context, the "why", or a concrete example
+- *Optional closer*: blockquote with key takeaway, or a question to invite replies
 - Keep it to one idea per post
+- Keep under 4,000 characters (Slack truncates at 40,000 but shorter is always better)
 
 ## Formatting (Slack mrkdwn)
 
@@ -51,26 +64,30 @@ Slack uses its own markup called *mrkdwn* — it is NOT standard Markdown. You m
 
 ### Quick reference
 
-| Element        | Slack mrkdwn syntax          | Renders as                        |
-|----------------|------------------------------|-----------------------------------|
-| Bold           | `*text*`                     | *text*                            |
-| Italic         | `_text_`                     | _text_                            |
-| Strikethrough  | `~text~`                     | ~text~                            |
-| Inline code    | `` `text` ``                 | `text`                            |
-| Code block     | ` ```text``` `               | (fenced code block)               |
-| Blockquote     | `> text`                     | (indented quote)                  |
-| Link           | `<https://example.com\|label>` | clickable "label"               |
-| Bullet list    | `- item` or `* item`        | bullet point                      |
-| Emoji          | `:fire:` `:brain:` `:rotating_light:` | the emoji glyph          |
+| Element          | Slack mrkdwn syntax                   | Notes                                   |
+|------------------|---------------------------------------|-----------------------------------------|
+| Bold             | `*text*`                              | Single asterisks only                   |
+| Italic           | `_text_`                              | Underscores only                        |
+| Strikethrough    | `~text~`                              | Single tildes                           |
+| Inline code      | `` `text` ``                          | Single backticks                        |
+| Code block       | ` ```text``` `                        | Triple backticks, multiline             |
+| Blockquote       | `> text`                              | Single line only                        |
+| Multi-blockquote | `>>> text`                            | Everything after `>>>` is quoted        |
+| Link             | `<https://example.com\|label>`        | Angle brackets + pipe                   |
+| Bullet list      | `- item`                              | Dash + space (prefer `-` over `*`)      |
+| Numbered list    | `1. item`                             | Number + period + space                 |
+| Emoji            | `:fire:` `:brain:` `:bulb:`          | Colon-wrapped shortcodes                |
 
 ### Common mistakes — these will NOT render correctly
 
 | Wrong (standard Markdown)   | Correct (Slack mrkdwn)        |
 |-----------------------------|-------------------------------|
 | `**bold**`                  | `*bold*`                      |
+| `*italic*`                  | `_italic_`                    |
 | `[text](url)`              | `<url\|text>`                  |
 | `# Heading`                | `*Bold text*` on its own line |
 | `***bold italic***`        | `*_bold italic_*`             |
+| `~~strikethrough~~`        | `~strikethrough~`             |
 
 ### Escaping special characters
 
@@ -79,20 +96,62 @@ Three characters are control characters in Slack and must be escaped if used lit
 - `<` → `&lt;`
 - `>` → `&gt;`
 
+Do NOT HTML-entity-encode the entire message. Only escape these three characters.
+
+### Whitespace and line breaks
+
+- `\n` produces a line break
+- `\n\n` produces a blank line (paragraph break) — use this between hook and body
+- More than two consecutive newlines are collapsed to one blank line
+- Multiple consecutive spaces are collapsed to one (except inside code blocks)
+- Inside `` ` `` and ` ``` `, whitespace and indentation are preserved exactly
+- All mrkdwn formatting is disabled inside code blocks
+
+### Emoji usage
+
+Use 1-3 emoji per post. The sweet spot is *one emoji at the start* as a visual category marker.
+
+| Shortcode | Use for |
+|-----------|---------|
+| `:bulb:` | TILs, ideas, insights |
+| `:fire:` | Hot takes, urgency |
+| `:rotating_light:` | PSAs, warnings, incidents |
+| `:brain:` | Mind-blown moments, deep thoughts |
+| `:rocket:` | Launches, deploys, performance wins |
+| `:eyes:` | Review requests, "look at this" |
+| `:zap:` | Quick tips, speed, performance |
+| `:bug:` | Bugs, debugging stories |
+| `:lock:` | Security topics |
+| `:tada:` | Celebrations, releases |
+| `:thinking_face:` | Questions, open discussion |
+| `:see_no_evil:` | Relatable mistakes |
+| `:skull:` | Cautionary tales |
+| `:hot_pepper:` | Spicy takes |
+| `:upside_down_face:` | Ironic observations |
+| `:melting_face:` | Frustration humor |
+
+Anti-pattern: do not use emoji as word replacements (":rocket: our :new: :sparkles: feature :tada:"). Emoji add signal, they don't replace text.
+
 ### Formatting guidelines
 
-- *Bold* the key insight or term so readers can scan and get the point instantly.
-- `` `Backtick` `` technical identifiers: function names, packages, CLI flags, error messages.
-- Use `_italic_` for contrast, subtle emphasis, or to set off a realization.
-- Sprinkle emoji where they add signal — `:rotating_light:` for PSAs, `:brain:` for mind-blown moments, `:fire:` for hot takes — but don't overdo it.
-- Use `>` blockquotes to set off a key takeaway or memorable one-liner.
+- *Bold* the key insight or term so readers can scan and get the point instantly
+- `` `Backtick` `` technical identifiers: function names, packages, CLI flags, error messages
+- Use `_italic_` for contrast, subtle emphasis, or to set off a realization
+- Use `>` blockquotes to set off a key takeaway or memorable one-liner
+- Use `-` (not `*`) for bullet lists to avoid ambiguity with bold formatting
+- Always use labeled links: `<url\|description>` not bare URLs
+- End with a question to invite replies: "Anyone else hit this?" or "What's your approach?"
 
 ## Tone
 
-- Casual-professional — like explaining something to a smart colleague over coffee
+- Casual-professional — like a knowledgeable teammate, not a system notification
 - Opinionated — take a stance, don't hedge everything
 - Technically precise — use correct terminology, but explain jargon when it matters
 - Sometimes fun — roughly 1 in 4 posts should be lighthearted, humorous, or just a relatable observation (see Variety & Rotation)
+- Vary your openings — if every post starts the same way, it becomes wallpaper
+- Avoid corporate language — no "leverage", "utilize", "facilitate", "actionable insights"
+- Show editorial judgment — don't post everything, post the *interesting* things
+- Include the "aha moment" — what changed your mental model
 
 ## Variety & Rotation
 
@@ -263,7 +322,7 @@ slack-social-ai history --json
 slack-social-ai history --clear
 
 # Print this guide
-slack-social-ai skill
+slack-social-ai guide
 
 # Configure webhook
 slack-social-ai init

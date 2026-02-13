@@ -21,7 +21,7 @@ main.go           CLI entrypoint, Kong parser, error handling, isUserAbort
 init.go           InitCmd — interactive webhook setup, runField helper, URL validation
 post.go           PostCmd — message resolution (arg/stdin/pipe), send + history append
 history.go        HistoryCmd — list/clear post history
-skill.go          SkillCmd — prints go:embed'd skill guide
+guide.go          GuideCmd — prints go:embed'd posting guide
 output.go         CLIError type, exit codes, JSON/human output helpers
 
 internal/
@@ -48,7 +48,7 @@ Commands are Kong subcommands. Each is a struct with a `Run(globals *Globals) er
 
 **Dual output**: Every command must respect `globals.JSON`. Success to stdout, errors to stderr.
 
-**`go:embed` skill guide** (skill.go): `slack-social-ai.skill.md` is embedded at compile time. Changes require rebuild.
+**`go:embed` posting guide** (guide.go): `slack-social-ai.guide.md` is embedded at compile time. The `guide` subcommand prints this guide. Changes require rebuild.
 
 ## Code Style
 
