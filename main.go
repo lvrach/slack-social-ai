@@ -1,9 +1,12 @@
 package main
 
 import (
+	"errors"
 	"os"
+	"strings"
 
 	"github.com/alecthomas/kong"
+	"github.com/charmbracelet/huh"
 )
 
 // Globals holds flags shared across all commands.
@@ -30,6 +33,11 @@ func main() {
 	)
 	err := ctx.Run(&cli.Globals)
 	if err != nil {
+		// Ctrl+C / Ctrl+D — exit silently.
+		if isUserAbort(err) {
+			os.Exit(0)
+		}
+
 		var cliErr *CLIError
 		if ok := asCLIError(err, &cliErr); ok {
 			if cli.JSON {
@@ -46,4 +54,20 @@ func main() {
 		}
 		os.Exit(1)
 	}
+}
+
+// isUserAbort returns true for errors caused by the user
+// quitting an interactive prompt (Ctrl+C, Ctrl+D).
+// It intentionally does NOT match io.EOF via errors.Is because
+// EOF can originate from network failures (e.g. "send webhook: EOF"),
+// which must surface as errors rather than silent exit 0.
+func isUserAbort(err error) bool {
+	if errors.Is(err, huh.ErrUserAborted) {
+		return true
+	}
+	// huh wraps bubbletea errors as "huh: <err>"
+	if strings.Contains(err.Error(), "user aborted") {
+		return true
+	}
+	return false
 }

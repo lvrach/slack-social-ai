@@ -2,10 +2,13 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"os/exec"
+	"os/user"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 
 	"github.com/lvrach/slack-social-ai/internal/keyring"
 	"github.com/lvrach/slack-social-ai/internal/manifest"
@@ -35,15 +38,16 @@ func (cmd *InitCmd) Run(globals *Globals) error {
 
 func (cmd *InitCmd) handleExisting(globals *Globals, existing string) error {
 	var choice string
-	err := huh.NewSelect[string]().
-		Title("Slack webhook is already configured.").
-		Options(
-			huh.NewOption("Test existing webhook", "test"),
-			huh.NewOption("Overwrite with new URL", "overwrite"),
-			huh.NewOption("Exit", "exit"),
-		).
-		Value(&choice).
-		Run()
+	err := runField(
+		huh.NewSelect[string]().
+			Title("Slack webhook is already configured.").
+			Options(
+				huh.NewOption("Test existing webhook", "test"),
+				huh.NewOption("Replace with a new URL", "overwrite"),
+				huh.NewOption("Exit", "exit"),
+			).
+			Value(&choice),
+	)
 	if err != nil {
 		return err
 	}
@@ -59,17 +63,19 @@ func (cmd *InitCmd) handleExisting(globals *Globals, existing string) error {
 }
 
 func (cmd *InitCmd) interactive(globals *Globals) error {
-	fmt.Println("Welcome to slack-social-ai!")
-	fmt.Println("Let's set up your Slack webhook.")
+	fmt.Println()
+	fmt.Println("  Welcome to slack-social-ai!")
+	fmt.Println("  Let's set up your Slack webhook.")
 	fmt.Println()
 
 	var hasWebhook bool
-	err := huh.NewConfirm().
-		Title("Do you already have a Slack webhook URL?").
-		Affirmative("Yes").
-		Negative("No, help me create one").
-		Value(&hasWebhook).
-		Run()
+	err := runField(
+		huh.NewConfirm().
+			Title("Do you already have a Slack webhook URL?").
+			Affirmative("Yes").
+			Negative("No, guide me through setup").
+			Value(&hasWebhook),
+	)
 	if err != nil {
 		return err
 	}
@@ -83,12 +89,13 @@ func (cmd *InitCmd) interactive(globals *Globals) error {
 
 	// Path A (continued) or Path B: prompt for URL.
 	var webhookURL string
-	err = huh.NewInput().
-		Title("Paste your Slack webhook URL:").
-		Placeholder("https://hooks.slack.com/services/T.../B.../xxx").
-		Validate(validateWebhookURL).
-		Value(&webhookURL).
-		Run()
+	err = runField(
+		huh.NewInput().
+			Title("Paste your Slack webhook URL:").
+			Placeholder("https://hooks.slack.com/services/T.../B.../xxx").
+			Validate(validateWebhookURL).
+			Value(&webhookURL),
+	)
 	if err != nil {
 		return err
 	}
@@ -96,42 +103,89 @@ func (cmd *InitCmd) interactive(globals *Globals) error {
 	return cmd.storeAndVerify(globals, webhookURL)
 }
 
+const maxAppNameLen = 35
+
+func defaultAppName() string {
+	if u, err := user.Current(); err == nil && u.Username != "" {
+		name := u.Username + "'s Claude"
+		if len(name) > maxAppNameLen {
+			name = name[:maxAppNameLen]
+		}
+		return name
+	}
+	return "slack-social-ai"
+}
+
 func (cmd *InitCmd) guidedSetup() error {
+	defName := defaultAppName()
 	var appName string
-	err := huh.NewInput().
-		Title("App name for Slack:").
-		Placeholder("slack-social-ai").
-		CharLimit(35).
-		Value(&appName).
-		Run()
+	err := runField(
+		huh.NewInput().
+			Title("App name for Slack:").
+			Placeholder(defName).
+			CharLimit(35).
+			Value(&appName),
+	)
 	if err != nil {
 		return err
 	}
 
 	if strings.TrimSpace(appName) == "" {
-		appName = "slack-social-ai"
+		appName = defName
 	}
 
-	// Generate manifest file.
-	manifestYAML := manifest.Generate(appName)
-	if err := os.WriteFile("slack-app-manifest.yml", []byte(manifestYAML), 0o600); err != nil {
-		return fmt.Errorf("write manifest: %w", err)
+	manifestJSON := manifest.Generate(appName)
+
+	// Try to copy to clipboard (macOS).
+	clipCmd := exec.Command("pbcopy")
+	clipCmd.Stdin = strings.NewReader(manifestJSON)
+	copied := clipCmd.Run() == nil
+
+	url := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("12")). // bright blue
+		Underline(true).
+		Render("https://api.slack.com/apps?new_app=1")
+
+	var title string
+	var desc string
+	if copied {
+		title = "Manifest copied to clipboard!"
+		desc = "**Create the Slack app:**\n" +
+			"1. Go to " + url + "\n" +
+			"2. Select \"From a manifest\"\n" +
+			"3. Choose your workspace\n" +
+			"4. Switch to **JSON** tab and paste the manifest\n" +
+			"5. Click \"Create\"\n\n" +
+			"**Get the webhook URL:**\n" +
+			"6. Go to \"Incoming Webhooks\" in the sidebar\n" +
+			"7. Click \"Add New Webhook to Workspace\"\n" +
+			"8. Pick a channel and authorize\n" +
+			"9. Copy the webhook URL"
+	} else {
+		title = "Copy this manifest"
+		// Print manifest to stdout since clipboard is unavailable.
+		fmt.Println(manifestJSON)
+		desc = "**Create the Slack app:**\n" +
+			"1. Copy the manifest printed above\n" +
+			"2. Go to " + url + "\n" +
+			"3. Select \"From a manifest\"\n" +
+			"4. Choose your workspace\n" +
+			"5. Switch to **JSON** tab and paste the manifest\n" +
+			"6. Click \"Create\"\n\n" +
+			"**Get the webhook URL:**\n" +
+			"7. Go to \"Incoming Webhooks\" in the sidebar\n" +
+			"8. Click \"Add New Webhook to Workspace\"\n" +
+			"9. Pick a channel and authorize\n" +
+			"10. Copy the webhook URL"
 	}
 
-	fmt.Println("\n✓ Created slack-app-manifest.yml")
-	fmt.Println("\nNext steps:")
-	fmt.Println("  1. Go to https://api.slack.com/apps?new_app=1")
-	fmt.Println("  2. Select \"From a manifest\"")
-	fmt.Println("  3. Choose your workspace")
-	fmt.Println("  4. Paste the contents of slack-app-manifest.yml")
-	fmt.Println("  5. Click \"Create\"")
-	fmt.Println("  6. Go to \"Incoming Webhooks\" in the sidebar")
-	fmt.Println("  7. Click \"Add New Webhook to Workspace\"")
-	fmt.Println("  8. Pick a channel and authorize")
-	fmt.Println("  9. Copy the webhook URL")
-	fmt.Println()
-
-	return nil
+	return runField(
+		huh.NewNote().
+			Title(title).
+			Description(desc).
+			Next(true).
+			NextLabel("I have my webhook URL"),
+	)
 }
 
 func (cmd *InitCmd) storeAndVerify(globals *Globals, webhookURL string) error {
@@ -173,6 +227,23 @@ func (cmd *InitCmd) verifyWebhook(globals *Globals, webhookURL string) error {
 		fmt.Println("ok!")
 	}
 	return nil
+}
+
+// runField wraps a single huh field in a form that supports
+// Ctrl+C and Ctrl+D for quitting, with bottom margin styling.
+func runField(field huh.Field) error {
+	km := huh.NewDefaultKeyMap()
+	km.Quit = key.NewBinding(key.WithKeys("ctrl+c", "ctrl+d"))
+
+	t := huh.ThemeBase()
+	t.Focused.Base = t.Focused.Base.MarginBottom(1)
+	t.Blurred.Base = t.Blurred.Base.MarginBottom(1)
+
+	return huh.NewForm(huh.NewGroup(field)).
+		WithShowHelp(false).
+		WithKeyMap(km).
+		WithTheme(t).
+		Run()
 }
 
 func validateWebhookURL(s string) error {
