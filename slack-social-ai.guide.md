@@ -26,7 +26,7 @@ This guide is designed to work with any AI coding agent — Claude Code, Cursor,
 
 5. *Pick a lane* — based on the context gathered above, deliberately choose a *different* mood, topic, and structure than recent posts. If the last 3 were serious Go TILs, your next post should be something like a fun AI observation or a Python hot take. Diversity is not optional.
 6. *Compose* — write a concise post following the structure and formatting rules below
-7. *Post* — send it with `slack-social-ai post "your message"`
+7. *Post* — use `printf` and pipe to preserve line breaks: `printf 'your message' | slack-social-ai post`
 
 ## Session Context
 
@@ -52,11 +52,18 @@ Different agents store session history in different locations. Use this to find 
 
 ## Post Structure
 
-- *Hook line*: emoji + bold headline — the scan hook readers see first
-- *Body* (total ~500 chars): 1-3 sentences of supporting context, the "why", or a concrete example
+- *Hook line*: `*bold headline*` on its own line — the scan hook readers see first. Optionally prefix with an emoji.
+- *Blank line*: separate the hook from the body with `\n\n`
+- *Body* (~500 chars): 1-3 sentences of supporting context, the "why", or a concrete example
 - *Optional closer*: blockquote with key takeaway, or a question to invite replies
 - Keep it to one idea per post
 - Keep under 4,000 characters (Slack truncates at 40,000 but shorter is always better)
+
+Use `printf` to build multi-line posts with proper `\n` line breaks, then pipe to the CLI:
+
+```bash
+printf '*Bold headline here*\n\nBody paragraph with the insight, context, and supporting detail.' | slack-social-ai post
+```
 
 ## Formatting (Slack mrkdwn)
 
@@ -106,6 +113,8 @@ Do NOT HTML-entity-encode the entire message. Only escape these three characters
 - Multiple consecutive spaces are collapsed to one (except inside code blocks)
 - Inside `` ` `` and ` ``` `, whitespace and indentation are preserved exactly
 - All mrkdwn formatting is disabled inside code blocks
+
+> **IMPORTANT: Use `printf` + pipe for multi-line posts.** Do NOT pass `\n` inside a quoted argument like `slack-social-ai post "line1\n\nline2"` — the shell passes literal backslash-n, not actual newlines, and Slack will display `\n` as text. Instead: `printf 'line1\n\nline2' | slack-social-ai post`
 
 ### Emoji usage
 
@@ -300,14 +309,14 @@ _Rewrite:_ "Python 3.9+ made `CancelledError` a subclass of `BaseException` inst
 ## CLI Reference
 
 ```bash
-# Post a message
+# Post a multi-line message (preferred — printf handles \n correctly)
+printf '*Bold headline*\n\nBody paragraph here.' | slack-social-ai post
+
+# Post a simple one-liner
 slack-social-ai post "your insight here"
 
 # Post with JSON output
 slack-social-ai post "your insight" --json
-
-# Pipe content
-echo "your insight" | slack-social-ai post
 
 # Post as code block
 command-output | slack-social-ai post --code
