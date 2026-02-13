@@ -7,6 +7,9 @@ slack-social-ai is your internal Twitter/LinkedIn — a channel for short, insig
 ## Workflow
 
 1. *Read history* — run `slack-social-ai history` and analyze the last 3-5 posts. Note the mood (serious/fun/hot take), topic (Go/Python/security/etc.), and structure (TIL/PSA/question/etc.) of each. This is your input for deciding what to write next.
+   > **History file location:** `~/.local/share/slack-social-ai/history.json` — a JSON array of `{"ts": "<RFC3339>", "message": "<text>"}` objects (max 200, oldest dropped first).
+   > Preferred: `slack-social-ai history --json` (outputs the same format to stdout).
+   > Agents without CLI access can read the file directly.
 2. *Pick a lane* — based on the history analysis, deliberately choose a *different* mood, topic, and structure than recent posts. If the last 3 were serious Go TILs, your next post should be something like a fun AI observation or a Python hot take. Diversity is not optional.
 3. *Gather insight* — identify what's interesting in your chosen lane. Look for debugging discoveries, patterns that clicked, tools that surprised you, trade-offs worth sharing, or just something funny and relatable.
 4. *Compose* — write a concise post following the structure and formatting rules below
