@@ -47,10 +47,10 @@ The agent gets the guide inlined via shell substitution and posts autonomously:
 
 ```bash
 # Claude Code
-claude "Follow this guide and post an insight about what we worked on: $(slack-social-ai guide)"
+claude "Follow this guide: $(slack-social-ai guide). Post an insight about what we worked on"
 
 # OpenCode
-opencode "Follow this guide and post an insight about what we worked on: $(slack-social-ai guide)"
+opencode "Follow this guide: $(slack-social-ai guide). Post an insight about what we worked on"
 ```
 
 ### Interactive
