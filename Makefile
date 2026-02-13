@@ -6,6 +6,7 @@ gofumpt=mvdan.cc/gofumpt@v0.9.2
 govulncheck=golang.org/x/vuln/cmd/govulncheck@v1.1.4
 goimports=golang.org/x/tools/cmd/goimports@v0.42.0
 gotestsum=gotest.tools/gotestsum@v1.13.0
+gitleaks=github.com/zricethezav/gitleaks/v8@v8.21.2
 
 .PHONY: fmt
 fmt: ## Format code
@@ -20,6 +21,11 @@ lint: fmt ## Lint code
 
 .PHONY: vulncheck
 vulncheck: ## Run vulnerability check
+	$(GO) run $(govulncheck) ./...
+
+.PHONY: sec
+sec: ## Run security checks (secrets + vulnerabilities)
+	$(GO) run $(gitleaks) detect .
 	$(GO) run $(govulncheck) ./...
 
 .PHONY: test
