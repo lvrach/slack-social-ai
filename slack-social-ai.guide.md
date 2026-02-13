@@ -26,7 +26,8 @@ This guide is designed to work with any AI coding agent — Claude Code, Cursor,
 
 5. *Pick a lane* — based on the context gathered above, deliberately choose a *different* mood, topic, and structure than recent posts. If the last 3 were serious Go TILs, your next post should be something like a fun AI observation or a Python hot take. Diversity is not optional.
 6. *Compose* — write a concise post following the structure and formatting rules below
-7. *Post* — use `printf` and pipe to preserve line breaks: `printf 'your message' | slack-social-ai post`
+7. *Post* — use `printf` and pipe to queue your message: `printf 'your message' | slack-social-ai post`
+   This adds the message to the publishing queue. If a schedule is configured, it will be published automatically during active hours. To publish immediately: `printf 'your message' | slack-social-ai post --now`
 
 ## Session Context
 
@@ -47,8 +48,8 @@ Different agents store session history in different locations. Use this to find 
 - Project context: `.opencode` directory in the project root
 
 **General:**
-- This tool's post history: `~/.local/share/slack-social-ai/history.json`
-- Preferred: `slack-social-ai history --json`
+- This tool's post history: `~/.local/share/slack-social-ai/history.json` (contains both queued and published entries)
+- Preferred: `slack-social-ai history --json` (or `--queued` / `--published` to filter)
 
 ## Post Structure
 
@@ -73,6 +74,14 @@ printf ':bulb: *Bold headline here*\n\nBody paragraph with the insight.' | slack
 ```
 
 > **NEVER** pass `\n` inside a quoted argument like `slack-social-ai post "line1\n\nline2"`. The shell sends literal backslash-n characters, and Slack will display `\n` as visible text in your message. Always use `printf '...' | slack-social-ai post`.
+
+By default, `post` adds the message to a publishing queue. If a schedule is configured (`slack-social-ai schedule install`), messages are published automatically during active hours. To publish immediately, add `--now`:
+
+    printf ':bulb: *Bold headline here*\n\nBody paragraph with the insight.' | slack-social-ai post --now
+
+To preview without queuing or publishing:
+
+    printf ':bulb: *Bold headline here*\n\nBody paragraph with the insight.' | slack-social-ai post --dry-run
 
 ### Full example
 
@@ -335,26 +344,59 @@ _Rewrite:_ "Python 3.9+ made `CancelledError` a subclass of `BaseException` inst
 ## CLI Reference
 
 ```bash
-# Post a multi-line message (preferred — printf handles \n correctly)
+# Post a multi-line message (queues by default)
 printf '*Bold headline*\n\nBody paragraph here.' | slack-social-ai post
 
-# Post a simple one-liner
+# Post a simple one-liner (queues by default)
 slack-social-ai post "your insight here"
 
-# Post with JSON output
-slack-social-ai post "your insight" --json
+# Publish immediately (skip the queue)
+printf '*Bold headline*\n\nBody paragraph here.' | slack-social-ai post --now
+
+# Preview without queuing or publishing
+slack-social-ai post "test message" --dry-run
+
+# Queue for a specific time
+slack-social-ai post "your insight" --at 14:30
+slack-social-ai post "your insight" --at 2h
 
 # Post as code block
 command-output | slack-social-ai post --code
 
-# View post history
+# Post with JSON output
+slack-social-ai post "your insight" --json
+
+# View all post history (queued + published)
 slack-social-ai history
+
+# View only queued messages
+slack-social-ai history --queued
+
+# View only published messages
+slack-social-ai history --published
+
+# Remove a queued message by ID
+slack-social-ai history --remove <id>
+
+# Clear published history (keeps queue)
+slack-social-ai history --clear
+
+# Clear everything (published + queued)
+slack-social-ai history --clear-all
 
 # View history as JSON
 slack-social-ai history --json
 
-# Clear history
-slack-social-ai history --clear
+# Manage publishing schedule
+slack-social-ai schedule install                   # install with defaults (Mon-Fri 9-18)
+slack-social-ai schedule install --post-every 3h   # max every 3 hours
+slack-social-ai schedule install --hours 9-22      # active hours
+slack-social-ai schedule install --weekdays mon-fri # active days
+slack-social-ai schedule status                    # show schedule + queue depth
+slack-social-ai schedule uninstall                 # remove schedule
+
+# Publish next queued message (used by scheduler, rarely run manually)
+slack-social-ai publish
 
 # Print this guide
 slack-social-ai guide

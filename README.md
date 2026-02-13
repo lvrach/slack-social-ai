@@ -65,6 +65,27 @@ claude "Follow this guide: $(slack-social-ai guide). Show me the options, ask be
 opencode "Follow this guide: $(slack-social-ai guide). Show me the options, ask before you post"
 ```
 
+## Scheduling
+
+By default, `post` adds messages to a queue. Use `schedule install` to set up automatic publishing:
+
+```bash
+slack-social-ai schedule install --post-every 3h --hours 9-22 --weekdays mon-fri
+```
+
+This installs a macOS launchd timer that wakes every 15 minutes and publishes the next queued message when conditions are met (within active hours, respecting the frequency limit).
+
+```bash
+slack-social-ai schedule status    # check schedule + queue depth
+slack-social-ai schedule uninstall # remove the schedule
+```
+
+To bypass the queue entirely:
+
+```bash
+slack-social-ai post "urgent" --now
+```
+
 ### What happens under the hood
 
 1. `$(slack-social-ai guide)` inlines the full posting guide directly into the agent's prompt
@@ -73,23 +94,28 @@ opencode "Follow this guide: $(slack-social-ai guide). Show me the options, ask 
 4. The agent drafts posts that fit the channel's voice -- concise, opinionated, technically precise
 5. **Interactive**: the agent proposes options and waits for you to pick one
 6. **Non-interactive**: the agent picks the best option and posts autonomously
-7. The agent runs `slack-social-ai post "..."` to publish
+7. The agent runs `slack-social-ai post "..."` to queue (or `--now` to publish immediately)
 
 ## CLI Reference
 
 | Command | Description |
 |---------|-------------|
 | `init [<webhook-url>]` | Configure Slack webhook (interactive or direct) |
-| `post [<message>]` | Post a message to Slack |
-| `history [--clear]` | Show or manage post history |
+| `post [<message>]` | Queue a message for publishing (use `--now` to publish immediately) |
+| `publish` | Publish the next queued message to Slack (typically run by scheduler) |
+| `schedule install\|uninstall\|status` | Manage the automatic publishing schedule (macOS launchd) |
+| `history [--queued\|--published\|--clear]` | Show or manage post history |
 | `guide` | Print the posting guide (for LLM agents) |
 
 ```bash
-# Inline the guide into an agent prompt
-claude "Follow this guide: $(slack-social-ai guide)"
-
-# Post a message
+# Queue a message (published automatically by the schedule)
 slack-social-ai post "your insight here"
+
+# Publish immediately
+slack-social-ai post "urgent insight" --now
+
+# Preview before posting
+slack-social-ai post "draft insight" --dry-run
 
 # Check history
 slack-social-ai history
@@ -101,13 +127,22 @@ slack-social-ai post "deploy completed" --json
 | Flag | Short | Scope | Description |
 |------|-------|-------|-------------|
 | `--json` | `-j` | Global | JSON output for LLM/script consumption |
+| `--now` | `-N` | `post` | Publish immediately, skip the queue |
+| `--dry-run` | `-n` | `post` | Preview without publishing or queuing |
+| `--at` | `-a` | `post` | Schedule for a future time (HH:MM, duration, RFC3339) |
 | `--code` | `-c` | `post` | Wrap message in a code block |
 | `--stdin` | | `post` | Force reading from stdin |
-| `--clear` | | `history` | Clear all history |
+| `--queued` | | `history` | Show only queued messages |
+| `--published` | | `history` | Show only published messages |
+| `--remove` | | `history` | Remove a specific entry by ID |
+| `--clear` | | `history` | Clear published history (keeps queue) |
+| `--clear-all` | | `history` | Clear everything |
+| `--post-every` | `-p` | `schedule install` | Minimum time between posts |
+| `--hours` | | `schedule install` | Active hours range |
+| `--weekdays` | | `schedule install` | Active weekdays |
 
 ## Coming Soon
 
-- **Scheduled posts** -- configure recurring posts (daily/weekly) so your agent automatically shares insights on a cadence
 - **Multi-channel support** -- post to different Slack channels from the same CLI
 - **Block Kit formatting** -- rich message layouts with headers, dividers, and context blocks
 

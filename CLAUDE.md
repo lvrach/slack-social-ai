@@ -19,16 +19,22 @@ make sec          # gitleaks (secrets) + govulncheck
 ```
 main.go           CLI entrypoint, Kong parser, error handling, isUserAbort
 init.go           InitCmd — interactive webhook setup, runField helper, URL validation
-post.go           PostCmd — message resolution (arg/stdin/pipe), send + history append
-history.go        HistoryCmd — list/clear post history
+post.go           PostCmd — queue-first (default), --now, --dry-run, --at
+message.go        MessageInput — shared message resolution (arg/stdin/pipe)
+time.go           parseAt — time parsing for --at flag (HH:MM, duration, RFC3339)
+publish.go        PublishCmd — scheduler processor, time/frequency guards
+schedule.go       ScheduleCmd — install/uninstall/status sub-subcommands (launchd)
+history.go        HistoryCmd — list/clear/--queued/--published/--remove/--clear-all
 guide.go          GuideCmd — prints go:embed'd posting guide
 output.go         CLIError type, exit codes, JSON/human output helpers
 
 internal/
   keyring/        Webhook URL storage via macOS Keychain (go-keyring)
   slack/          SendWebhook — HTTP POST to Slack incoming webhook
-  history/        JSON file at ~/.local/share/slack-social-ai/history.json
+  history/        JSON file at ~/.local/share/slack-social-ai/history.json, file locking via gofrs/flock
   manifest/       Generates Slack app manifest JSON for guided setup
+  config/         Schedule config (~/.config/slack-social-ai/config.json)
+  launchd/        Plist generation, bootstrap/bootout, IsInstalled
 ```
 
 Commands are Kong subcommands. Each is a struct with a `Run(globals *Globals) error` method. `Globals` carries the `--json` flag. Kong dispatches via `ctx.Run(&cli.Globals)`.
@@ -50,6 +56,12 @@ Commands are Kong subcommands. Each is a struct with a `Run(globals *Globals) er
 
 **`go:embed` posting guide** (guide.go): `slack-social-ai.guide.md` is embedded at compile time. The `guide` subcommand prints this guide. Changes require rebuild.
 
+**Queue-first posting**: `post` queues by default. `post --now` publishes immediately. `publish` is the scheduler processor.
+
+**Dumb timer + smart Go code**: launchd wakes every 15 min. All scheduling logic (hours, weekdays, frequency) lives in Go code (`internal/config`), not in the plist.
+
+**File locking**: `gofrs/flock` with separate `.lock` file for history.json. ClaimNextReady is atomic (lock → read → update status → unlock).
+
 ## Code Style
 
 - **Formatter**: gofumpt with `extra-rules: true` (stricter than gofmt)
@@ -67,6 +79,10 @@ Commands are Kong subcommands. Each is a struct with a `Run(globals *Globals) er
 - `isUserAbort` intentionally avoids `errors.Is(err, io.EOF)` — EOF can come from network failures.
 - `defaultAppName()` truncates to 35 chars (Slack's app name limit).
 - **macOS is the primary platform**: `pbcopy` for clipboard, Keychain for secrets.
+- Schedule config is at `~/.config/slack-social-ai/config.json`, separate from history data.
+- `ClaimNextReady` holds a file lock while reading + updating status to prevent double-claim.
+- Legacy history format (`{ts, message}`) is auto-migrated on first Load() to new format with ID/status fields.
+- launchd plist at `~/Library/LaunchAgents/com.slack-social-ai.publish.plist` — re-running `schedule install` is idempotent.
 
 ## Testing
 
@@ -74,4 +90,4 @@ Commands are Kong subcommands. Each is a struct with a `Run(globals *Globals) er
 make test
 ```
 
-Uses gotestsum with: `-race`, `-shuffle=on`, `-failfast`, `-covermode=atomic`, `-coverpkg=./...`. No test files exist yet.
+Uses gotestsum with: `-race`, `-shuffle=on`, `-failfast`, `-covermode=atomic`, `-coverpkg=./...`. Tests exist in root package and all internal packages. Use -race flag for concurrent history tests.
