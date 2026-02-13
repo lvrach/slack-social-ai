@@ -2,15 +2,19 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 
+	"github.com/lvrach/slack-social-ai/internal/config"
 	"github.com/lvrach/slack-social-ai/internal/keyring"
+	"github.com/lvrach/slack-social-ai/internal/launchd"
 	"github.com/lvrach/slack-social-ai/internal/manifest"
 	"github.com/lvrach/slack-social-ai/internal/slack"
 )
@@ -208,8 +212,54 @@ func (cmd *InitCmd) storeAndVerify(globals *Globals, webhookURL string) error {
 	} else {
 		fmt.Println("\n" + msg)
 		fmt.Println("\nTry it: slack-social-ai post \"Hello from the terminal!\"")
+
+		// Offer schedule setup if not already installed (interactive path only).
+		if !launchd.IsInstalled() {
+			cmd.offerScheduleSetup()
+		}
 	}
 	return nil
+}
+
+// offerScheduleSetup prompts the user to set up the publishing schedule.
+func (cmd *InitCmd) offerScheduleSetup() {
+	var setupSchedule bool
+	err := runField(
+		huh.NewConfirm().
+			Title("Enable automatic publishing? (sets up a posting schedule)").
+			Affirmative("Yes").
+			Negative("Not now").
+			Value(&setupSchedule),
+	)
+	if err != nil || !setupSchedule {
+		return
+	}
+
+	cfg := config.Config{Schedule: config.DefaultSchedule()}
+	if err := config.Save(cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not save config: %s\n", err)
+		return
+	}
+
+	execPath, err := os.Executable()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not resolve executable path: %s\n", err)
+		return
+	}
+	execPath, err = filepath.EvalSymlinks(execPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not resolve symlinks: %s\n", err)
+		return
+	}
+
+	if err := launchd.Install(execPath); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not install schedule: %s\n", err)
+		return
+	}
+
+	sched := config.DefaultSchedule()
+	fmt.Printf("Schedule installed. Publishing: %s %02d:00–%02d:00.\n",
+		formatWeekdays(sched.Weekdays), sched.StartHour, sched.EndHour)
 }
 
 func (cmd *InitCmd) verifyWebhook(globals *Globals, webhookURL string) error {
