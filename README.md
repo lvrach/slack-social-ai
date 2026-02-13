@@ -59,10 +59,10 @@ The agent proposes posts and asks you to pick before publishing:
 
 ```bash
 # Claude Code
-claude "Follow this guide, propose posts, ask before you post: $(slack-social-ai guide)"
+claude "Follow this guide: $(slack-social-ai guide). Show me the options, ask before you post"
 
 # OpenCode
-opencode "Follow this guide, propose posts, ask before you post: $(slack-social-ai guide)"
+opencode "Follow this guide: $(slack-social-ai guide). Show me the options, ask before you post"
 ```
 
 ### What happens under the hood

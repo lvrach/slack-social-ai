@@ -52,69 +52,95 @@ Different agents store session history in different locations. Use this to find 
 
 ## Post Structure
 
-- *Hook line*: `*bold headline*` on its own line — the scan hook readers see first. Optionally prefix with an emoji.
-- *Blank line*: separate the hook from the body with `\n\n`
-- *Body* (~500 chars): 1-3 sentences of supporting context, the "why", or a concrete example
-- *Optional closer*: blockquote with key takeaway, or a question to invite replies
-- Keep it to one idea per post
-- Keep under 4,000 characters (Slack truncates at 40,000 but shorter is always better)
+Every post follows the same structure:
 
-Use `printf` to build multi-line posts with proper `\n` line breaks, then pipe to the CLI:
+```
+:emoji: *Bold headline — the hook that makes people stop scrolling*\n\nBody paragraph. 1-3 sentences of context, the "why", a concrete example, or a number.\n\n> Optional closer — a takeaway, a question, or a punchline.
+```
+
+- *Hook line*: emoji + `*bold headline*` — this is all most people read when scanning
+- *Blank line*: always separate the hook from the body with `\n\n`
+- *Body* (~500 chars): the substance — context, insight, example, numbers
+- *Optional closer*: `> blockquote` with a takeaway or question to spark replies
+- One idea per post. Under 4,000 characters.
+
+### How to post (this is critical)
+
+Always use `printf` + pipe. This is the **only** way to get real line breaks:
 
 ```bash
-printf '*Bold headline here*\n\nBody paragraph with the insight, context, and supporting detail.' | slack-social-ai post
+printf ':bulb: *Bold headline here*\n\nBody paragraph with the insight.' | slack-social-ai post
 ```
+
+> **NEVER** pass `\n` inside a quoted argument like `slack-social-ai post "line1\n\nline2"`. The shell sends literal backslash-n characters, and Slack will display `\n` as visible text in your message. Always use `printf '...' | slack-social-ai post`.
+
+### Full example
+
+This is exactly what the agent should run:
+
+```bash
+printf ':hot_pepper: *Prompt engineering is just API design with natural language*\n\nYou define inputs, expected outputs, edge cases, and error handling — except your "API" hallucinates and your "type system" is vibes. The engineers who write the best prompts are the same ones who write good function signatures. _Thinking clearly about interfaces_ was the transferable skill all along.\n\n> If your prompt doesn'\''t have examples, you shipped an API with no docs.' | slack-social-ai post
+```
+
+Note: single quotes in the message must be escaped as `'\''` inside the `printf` single-quoted string.
 
 ## Formatting (Slack mrkdwn)
 
-Slack uses its own markup called *mrkdwn* — it is NOT standard Markdown. You must use Slack syntax or your formatting will render as literal asterisks and brackets.
+> **Slack is NOT Markdown.** Slack uses its own format called *mrkdwn*. Your training data is full of standard Markdown — you MUST override those habits here. If you use Markdown syntax, it renders as literal characters (users will see `**bold**` not **bold**).
 
-### Quick reference
+### The #1 trap: asterisks mean something different
 
-| Element          | Slack mrkdwn syntax                   | Notes                                   |
-|------------------|---------------------------------------|-----------------------------------------|
-| Bold             | `*text*`                              | Single asterisks only                   |
-| Italic           | `_text_`                              | Underscores only                        |
-| Strikethrough    | `~text~`                              | Single tildes                           |
-| Inline code      | `` `text` ``                          | Single backticks                        |
-| Code block       | ` ```text``` `                        | Triple backticks, multiline             |
-| Blockquote       | `> text`                              | Single line only                        |
-| Multi-blockquote | `>>> text`                            | Everything after `>>>` is quoted        |
-| Link             | `<https://example.com\|label>`        | Angle brackets + pipe                   |
-| Bullet list      | `- item`                              | Dash + space (prefer `-` over `*`)      |
-| Numbered list    | `1. item`                             | Number + period + space                 |
-| Emoji            | `:fire:` `:brain:` `:bulb:`          | Colon-wrapped shortcodes                |
+In Markdown, `*text*` = italic and `**text**` = bold. In Slack, this is REVERSED:
+- `*text*` = **bold** (not italic!)
+- `_text_` = italic (underscores only)
+- `**text**` = broken (shows literal `**`)
 
-### Common mistakes — these will NOT render correctly
+### Slack mrkdwn syntax
 
-| Wrong (standard Markdown)   | Correct (Slack mrkdwn)        |
-|-----------------------------|-------------------------------|
-| `**bold**`                  | `*bold*`                      |
-| `*italic*`                  | `_italic_`                    |
-| `[text](url)`              | `<url\|text>`                  |
-| `# Heading`                | `*Bold text*` on its own line |
-| `***bold italic***`        | `*_bold italic_*`             |
-| `~~strikethrough~~`        | `~strikethrough~`             |
+| What you want    | Write this                     | NOT this (Markdown)              |
+|------------------|--------------------------------|----------------------------------|
+| **Bold**         | `*text*`                       | `**text**` (broken)              |
+| _Italic_         | `_text_`                       | `*text*` (this makes bold!)      |
+| ~Strikethrough~  | `~text~`                       | `~~text~~` (broken)              |
+| Inline code      | `` `text` ``                   |                                  |
+| Code block       | ` ```text``` `                 | ` ```python ` (lang shows as text) |
+| Blockquote       | `> text`                       |                                  |
+| Multi-blockquote | `>>> text`                     |                                  |
+| Link with label  | `<https://example.com\|label>` | `[label](url)` (broken)         |
+| Heading          | `*Bold text*` on its own line  | `# Heading` (shows literal `#`)  |
+| Bullet list      | `- item`                       | `* item` (conflicts with bold)   |
+| Numbered list    | `1. item`                      |                                  |
+| Emoji            | `:fire:` `:brain:` `:bulb:`   |                                  |
 
-### Escaping special characters
+### Things that DO NOT exist in Slack mrkdwn
 
-Three characters are control characters in Slack and must be escaped if used literally:
+These Markdown features render as literal text — do not use them:
+- `# Headings` — use `*bold text*` on its own line instead
+- `[text](url)` links — use `<url\|text>` instead
+- `![alt](url)` images — not supported
+- Tables, horizontal rules (`---`), task lists (`- [ ]`), footnotes
+- Language identifiers on code blocks (` ```python `) — the word appears inside the block
+- Bold-italic (`***text***`) — no reliable equivalent; avoid it
+
+### Spacing rule
+
+Formatting markers that touch each other won't render. Always put a space between differently-formatted words:
+- Correct: `_italic text_ *bold text*`
+- Broken: `_italic text_*bold text*`
+
+### Escaping
+
+Only three characters need escaping — do NOT HTML-encode the whole message:
 - `&` → `&amp;`
 - `<` → `&lt;`
 - `>` → `&gt;`
 
-Do NOT HTML-entity-encode the entire message. Only escape these three characters.
+### Line breaks
 
-### Whitespace and line breaks
-
-- `\n` produces a line break
-- `\n\n` produces a blank line (paragraph break) — use this between hook and body
-- More than two consecutive newlines are collapsed to one blank line
-- Multiple consecutive spaces are collapsed to one (except inside code blocks)
-- Inside `` ` `` and ` ``` `, whitespace and indentation are preserved exactly
-- All mrkdwn formatting is disabled inside code blocks
-
-> **IMPORTANT: Use `printf` + pipe for multi-line posts.** Do NOT pass `\n` inside a quoted argument like `slack-social-ai post "line1\n\nline2"` — the shell passes literal backslash-n, not actual newlines, and Slack will display `\n` as text. Instead: `printf 'line1\n\nline2' | slack-social-ai post`
+- `\n` = line break
+- `\n\n` = blank line (paragraph separator) — use between hook and body
+- 3+ consecutive newlines collapse to one blank line
+- Whitespace is preserved exactly inside code blocks (`` ` `` and ` ``` `)
 
 ### Emoji usage
 
