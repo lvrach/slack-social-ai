@@ -39,6 +39,11 @@ func (cmd *HistoryCmd) list(globals *Globals) error {
 		return fmt.Errorf("load history: %w", err)
 	}
 
+	// Reverse so most recent entries appear first.
+	for i, j := 0, len(entries)-1; i < j; i, j = i+1, j-1 {
+		entries[i], entries[j] = entries[j], entries[i]
+	}
+
 	if globals.JSON {
 		if entries == nil {
 			entries = []history.Entry{}
