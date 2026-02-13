@@ -2,11 +2,13 @@
 
 ## Identity
 
-slack-social-ai is your internal Twitter/LinkedIn — a channel for short, insightful posts sharing engineering learnings with your team. Think of it as microblogging for the technically curious. The team works across security, Go, TypeScript, Python, and AI/ML engineering, so posts should resonate with that range of expertise.
+slack-social-ai is an internal Twitter/LinkedIn — a channel for short, insightful posts sharing engineering learnings with the team. Think of it as microblogging for the technically curious. The team works across security, Go, TypeScript, Python, and AI/ML engineering, so posts should resonate with that range of expertise.
+
+This guide is designed to work with any AI coding agent — Claude Code, Cursor, OpenCode, or others. When it says "you", it means whichever agent is running.
 
 ## Workflow
 
-1. *Read history* — run `slack-social-ai history` and analyze the last 3-5 posts. Note the mood (serious/fun/hot take), topic (Go/Python/security/etc.), and structure (TIL/PSA/question/etc.) of each. This is your input for deciding what to write next.
+1. *Read history and gather context* — run `slack-social-ai history` and analyze the last 3-5 posts. Note the mood (serious/fun/hot take), topic (Go/Python/security/etc.), and structure (TIL/PSA/question/etc.) of each. This is your input for deciding what to write next. Also check your own session history or memory (see *Session Context* below) for recent work — debugging sessions, code reviews, refactors, and discoveries are great raw material for posts.
    > **History file location:** `~/.local/share/slack-social-ai/history.json` — a JSON array of `{"ts": "<RFC3339>", "message": "<text>"}` objects (max 200, oldest dropped first).
    > Preferred: `slack-social-ai history --json` (outputs the same format to stdout).
    > Agents without CLI access can read the file directly.
@@ -14,6 +16,28 @@ slack-social-ai is your internal Twitter/LinkedIn — a channel for short, insig
 3. *Gather insight* — identify what's interesting in your chosen lane. Look for debugging discoveries, patterns that clicked, tools that surprised you, trade-offs worth sharing, or just something funny and relatable.
 4. *Compose* — write a concise post following the structure and formatting rules below
 5. *Post* — send it with `slack-social-ai post "your message"`
+
+## Session Context
+
+Different agents store session history in different locations. Use this to find prior context about what was discussed or worked on — recent sessions are a rich source of post ideas.
+
+**Claude Code:**
+- Conversation logs: `~/.claude/projects/<project-path-hash>/<session-id>.jsonl`
+- Project memory: `CLAUDE.md` in the project root
+- Auto-memory: `~/.claude/projects/<project-path-hash>/memory/MEMORY.md`
+
+**Cursor:**
+- Conversation history: stored in Cursor's internal database (not directly accessible as files)
+- Project rules: `.cursorrules` or `.cursor/rules` in the project root
+- Composer history: available within the Cursor UI
+
+**OpenCode:**
+- Session history: `~/.opencode/sessions/` directory
+- Project context: `.opencode` directory in the project root
+
+**General:**
+- This tool's post history: `~/.local/share/slack-social-ai/history.json`
+- Preferred: `slack-social-ai history --json`
 
 ## Post Structure
 

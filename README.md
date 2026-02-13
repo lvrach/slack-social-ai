@@ -1,6 +1,6 @@
 # slack-social-ai
 
-Post messages to Slack from the terminal via incoming webhooks. Minimal, scriptable, and designed to work with AI coding agents like [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+Post messages to Slack from the terminal via incoming webhooks. Minimal, scriptable, and designed to work with AI coding agents ([Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Cursor](https://cursor.com), [OpenCode](https://opencode.ai), and others).
 
 ## Install
 
@@ -92,46 +92,78 @@ The guide covers tone, post structure, Slack mrkdwn formatting (which differs fr
 
 This is the bridge between the CLI and AI agent workflows -- the agent reads the guide, learns the conventions, and then uses the `post` and `history` commands to compose and publish.
 
-## Using with Claude Code
+## Using with AI Coding Agents
 
-The primary workflow for `slack-social-ai` is pairing it with an AI coding agent. Here is how to set it up with [Claude Code](https://docs.anthropic.com/en/docs/claude-code):
+The primary workflow for `slack-social-ai` is pairing it with an AI coding agent. The `skill` command outputs an LLM-optimized guide that any agent can read to learn how to compose posts.
 
-### Quick start
-
-1. Install the tool and configure your webhook:
+### Claude Code
 
 ```bash
-go install github.com/lvrach/slack-social-ai@latest
-slack-social-ai init
+# One-liner: read the skill and post
+claude -p "Run slack-social-ai skill to learn how to post, then share an insight about what we just worked on"
+
+# Interactive: in a Claude Code session
+> Run `slack-social-ai skill` to learn how to post, then share an insight about the refactoring we just did
 ```
 
-2. In a Claude Code session, ask Claude to read the skill guide and post:
+To make it always available, add to your project's `CLAUDE.md`:
 
-```
-You: Run `slack-social-ai skill` to learn how to post, then share
-     an insight about the refactoring we just did
-
-Claude: [reads skill guide, checks history with `slack-social-ai history`,
-         composes a post following the guide's conventions,
-         runs `slack-social-ai post "..."`]
+```markdown
+## Slack Posting
+Run `slack-social-ai skill` for posting guidelines, then use `slack-social-ai post "..."` to publish.
 ```
 
-That's it. Claude reads the skill output, which teaches it the tone, structure, Slack mrkdwn formatting rules, and variety guidelines. It then checks recent history to avoid repeats and rotates topics and moods automatically.
+Or register a custom slash command in `~/.claude/commands/`:
+
+```markdown
+# slack-post.md
+Run `slack-social-ai skill` to learn the posting conventions, check `slack-social-ai history` to avoid repeats, then compose and post an insight about: $ARGUMENTS
+```
+
+### Cursor
+
+In Cursor's Composer or Agent mode:
+
+```
+Run `slack-social-ai skill` in the terminal to learn how to post,
+then use `slack-social-ai post "..."` to share an insight about what we just worked on.
+```
+
+To make it persistent, add to `.cursor/rules/slack-post.mdc`:
+
+```yaml
+---
+description: "Post engineering insights to Slack"
+alwaysApply: false
+---
+Run `slack-social-ai skill` for posting guidelines. Use `slack-social-ai post "..."` to publish.
+Check `slack-social-ai history` first to avoid repeats and rotate topics.
+```
+
+### OpenCode
+
+```bash
+# One-liner
+opencode -p "Run slack-social-ai skill to learn how to post, then share an insight about what we just worked on"
+
+# Interactive: in an OpenCode session
+> Run `slack-social-ai skill` to learn how to post, then share an insight
+```
+
+To make it persistent, add to `AGENTS.md` or `CLAUDE.md` in your project root:
+
+```markdown
+## Slack Posting
+Run `slack-social-ai skill` for posting guidelines, then use `slack-social-ai post "..."` to publish.
+```
 
 ### What happens under the hood
 
 1. `slack-social-ai skill` prints the full LLM-optimized guide to stdout
-2. Claude reads the guide and learns the posting conventions
-3. Claude runs `slack-social-ai history` to see recent posts and avoid duplicate content or patterns
-4. Claude composes a post that fits the channel's voice -- concise, opinionated, technically precise
-5. Claude runs `slack-social-ai post "..."` to publish
-
-### Making it easier to invoke
-
-You can reduce the setup to a single prompt by adding the skill guide to your project's configuration:
-
-- **CLAUDE.md**: Add `slack-social-ai skill` output (or a reference to run it) in your project's `CLAUDE.md` file so Claude always knows how to post.
-- **Custom slash command**: Register `slack-social-ai skill` as a custom slash command in Claude Code for quick access during any session.
+2. The agent reads the guide and learns the posting conventions (tone, Slack mrkdwn, variety rules)
+3. The agent runs `slack-social-ai history` to check recent posts and avoid duplicate content or patterns
+4. The agent composes a post that fits the channel's voice -- concise, opinionated, technically precise
+5. The agent runs `slack-social-ai post "..."` to publish
 
 ### Scripting and CI/CD
 
@@ -145,6 +177,12 @@ slack-social-ai post "deploy to prod completed" --json
 ```bash
 slack-social-ai history --json
 ```
+
+## Coming Soon
+
+- **Scheduled posts** -- configure recurring posts (daily/weekly) so your agent automatically shares insights on a cadence
+- **Multi-channel support** -- post to different Slack channels from the same CLI
+- **Block Kit formatting** -- rich message layouts with headers, dividers, and context blocks
 
 ## JSON Output
 
