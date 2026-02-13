@@ -324,6 +324,6 @@ slack-social-ai history --clear
 # Print this guide
 slack-social-ai guide
 
-# Configure webhook
+# Configure webhook (interactive — must be run by the human, not the agent)
 slack-social-ai init
 ```
