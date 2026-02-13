@@ -85,8 +85,8 @@ opencode "Follow this guide, propose posts, ask before you post: $(slack-social-
 | `guide` | Print the posting guide (for LLM agents) |
 
 ```bash
-# Load the guide directly into any command
-$(slack-social-ai guide)
+# Inline the guide into an agent prompt
+claude "Follow this guide: $(slack-social-ai guide)"
 
 # Post a message
 slack-social-ai post "your insight here"
