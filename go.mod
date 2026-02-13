@@ -1,4 +1,4 @@
-module github.com/lvrach/slack-social
+module github.com/lvrach/slack-social-ai
 
 go 1.25.0
 

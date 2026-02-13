@@ -34,7 +34,7 @@ test: ## Run tests
 
 .PHONY: build
 build: ## Build binary
-	$(GO) build -o bin/slack-social .
+	$(GO) build -o bin/slack-social-ai .
 
 .PHONY: install
 install: ## Install binary

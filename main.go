@@ -11,18 +11,20 @@ type Globals struct {
 	JSON bool `help:"Output JSON for LLM/script consumption." short:"j"`
 }
 
-// CLI is the root command structure for slack-social.
+// CLI is the root command structure for slack-social-ai.
 type CLI struct {
 	Globals
 
-	Init InitCmd `cmd:"" help:"Configure Slack webhook (interactive setup)."`
-	Post PostCmd `cmd:"" help:"Post a message to Slack."`
+	Init    InitCmd    `cmd:"" help:"Configure Slack webhook (interactive setup)."`
+	Post    PostCmd    `cmd:"" help:"Post a message to Slack."`
+	History HistoryCmd `cmd:"" help:"Show or manage post history."`
+	Skill   SkillCmd   `cmd:"" help:"Print agent skill instructions (for LLM consumption)."`
 }
 
 func main() {
 	cli := CLI{}
 	ctx := kong.Parse(&cli,
-		kong.Name("slack-social"),
+		kong.Name("slack-social-ai"),
 		kong.Description("Post messages to Slack from the terminal."),
 		kong.UsageOnError(),
 	)

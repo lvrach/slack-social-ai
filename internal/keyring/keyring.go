@@ -10,7 +10,7 @@ import (
 var ErrNotFound = gokeyring.ErrNotFound
 
 const (
-	serviceName = "slack-social"
+	serviceName = "slack-social-ai"
 	userName    = "webhook-url"
 )
 

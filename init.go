@@ -7,9 +7,9 @@ import (
 
 	"github.com/charmbracelet/huh"
 
-	"github.com/lvrach/slack-social/internal/keyring"
-	"github.com/lvrach/slack-social/internal/manifest"
-	"github.com/lvrach/slack-social/internal/slack"
+	"github.com/lvrach/slack-social-ai/internal/keyring"
+	"github.com/lvrach/slack-social-ai/internal/manifest"
+	"github.com/lvrach/slack-social-ai/internal/slack"
 )
 
 // InitCmd configures the Slack webhook interactively or via argument.
@@ -59,7 +59,7 @@ func (cmd *InitCmd) handleExisting(globals *Globals, existing string) error {
 }
 
 func (cmd *InitCmd) interactive(globals *Globals) error {
-	fmt.Println("Welcome to slack-social!")
+	fmt.Println("Welcome to slack-social-ai!")
 	fmt.Println("Let's set up your Slack webhook.")
 	fmt.Println()
 
@@ -100,7 +100,7 @@ func (cmd *InitCmd) guidedSetup() error {
 	var appName string
 	err := huh.NewInput().
 		Title("App name for Slack:").
-		Placeholder("slack-social").
+		Placeholder("slack-social-ai").
 		CharLimit(35).
 		Value(&appName).
 		Run()
@@ -109,7 +109,7 @@ func (cmd *InitCmd) guidedSetup() error {
 	}
 
 	if strings.TrimSpace(appName) == "" {
-		appName = "slack-social"
+		appName = "slack-social-ai"
 	}
 
 	// Generate manifest file.
@@ -153,7 +153,7 @@ func (cmd *InitCmd) storeAndVerify(globals *Globals, webhookURL string) error {
 		printSuccessJSON(msg)
 	} else {
 		fmt.Println("\n" + msg)
-		fmt.Println("\nTry it: slack-social post \"Hello from the terminal!\"")
+		fmt.Println("\nTry it: slack-social-ai post \"Hello from the terminal!\"")
 	}
 	return nil
 }
@@ -162,7 +162,7 @@ func (cmd *InitCmd) verifyWebhook(globals *Globals, webhookURL string) error {
 	if !globals.JSON {
 		fmt.Print("Verifying webhook... ")
 	}
-	if err := slack.SendWebhook(webhookURL, "👋 slack-social is connected!"); err != nil {
+	if err := slack.SendWebhook(webhookURL, "👋 slack-social-ai is connected!"); err != nil {
 		if !globals.JSON {
 			fmt.Println("failed.")
 		}

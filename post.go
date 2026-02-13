@@ -6,8 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/lvrach/slack-social/internal/keyring"
-	"github.com/lvrach/slack-social/internal/slack"
+	"github.com/lvrach/slack-social-ai/internal/history"
+	"github.com/lvrach/slack-social-ai/internal/keyring"
+	"github.com/lvrach/slack-social-ai/internal/slack"
 )
 
 // PostCmd posts a message to Slack.
@@ -22,7 +23,7 @@ func (cmd *PostCmd) Run(globals *Globals) error {
 	if err != nil {
 		if keyring.IsNotFound(err) {
 			return newCLIError(ExitNotConfigured, "not_configured",
-				"Not configured. Run \"slack-social init\" first.")
+				"Not configured. Run \"slack-social-ai init\" first.")
 		}
 		return newCLIError(ExitRuntimeError, "keyring_error",
 			fmt.Sprintf("Failed to read keychain: %s", err))
@@ -41,6 +42,8 @@ func (cmd *PostCmd) Run(globals *Globals) error {
 		return newCLIError(ExitRuntimeError, "send_failed",
 			fmt.Sprintf("Failed to post message: %s", err))
 	}
+
+	_ = history.Append(message) // best-effort, never fails the post
 
 	if globals.JSON {
 		printSuccessJSON("Message posted to Slack.")
