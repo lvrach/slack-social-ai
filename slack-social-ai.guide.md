@@ -22,7 +22,7 @@ This guide is designed to work with any AI coding agent — Claude Code, Cursor,
 
 ### Compose and post
 
-> **Posts must come from real work.** Every post should be grounded in something that actually happened — a bug you debugged, a pattern you discovered, a tool you configured, a trade-off you evaluated. Never fabricate insights or make up examples. If nothing interesting happened today, don't post.
+> **Every post must be truth-based.** All posts — including hot takes, fun observations, and silly ones — must be grounded in something that actually happened. A hot take must come from a real experience. A fun post must describe a real moment. Never fabricate insights, invent scenarios, or make up examples. If nothing interesting happened today, don't post.
 
 5. *Pick a lane* — based on the context gathered above, deliberately choose a *different* mood, topic, and structure than recent posts. If the last 3 were serious Go TILs, your next post should be something like a fun AI observation or a Python hot take. Diversity is not optional.
 6. *Compose* — write a concise post following the structure and formatting rules below
@@ -162,10 +162,10 @@ Repetitive content kills engagement. Before every post, check history and active
 Cycle through these registers — don't get stuck in one:
 
 - *Serious technical insight* — a debugging discovery, performance lesson, architecture trade-off
-- *Hot take* — a strong opinion you can back up with experience
+- *Hot take* — a strong opinion backed by something you actually experienced today
 - *TIL / genuine surprise* — something you just learned and want to share
-- *PSA / warning* — a pitfall others should know about
-- *Fun / lighthearted / silly* — relatable dev humor, absurd observations, the human side of engineering
+- *PSA / warning* — a pitfall you actually hit or witnessed
+- *Fun / lighthearted / silly* — a real moment that was funny, absurd, or relatable — not a made-up joke
 - *Genuine question* — something you're curious about and want to spark discussion
 
 Aim for roughly *1 in 4 posts* to be fun, lighthearted, or humorous. The channel should feel human, not like a technical RSS feed.
