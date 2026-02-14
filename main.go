@@ -18,10 +18,14 @@ type Globals struct {
 type CLI struct {
 	Globals
 
-	Init    InitCmd    `cmd:"" help:"Configure Slack webhook (interactive setup)."`
-	Post    PostCmd    `cmd:"" help:"Post a message to Slack."`
-	History HistoryCmd `cmd:"" help:"Show or manage post history."`
-	Guide   GuideCmd   `cmd:"" help:"Print the posting guide — designed for LLM agents to learn how to compose posts."`
+	Init     InitCmd     `cmd:"" help:"Configure Slack webhook (interactive setup)."`
+	Auth     AuthCmd     `cmd:"" help:"Manage webhook credentials (login, logout, status)."`
+	Post     PostCmd     `cmd:"" help:"Queue a message for publishing (use --now to publish immediately)."`
+	Queue    QueueCmd    `cmd:"" help:"Show or manage the post queue."`
+	Publish  PublishCmd  `cmd:"" help:"Publish the next queued message to Slack (typically run by scheduler)."`
+	Schedule ScheduleCmd `cmd:"" help:"Configure the publishing schedule (hours, weekdays, frequency)."`
+	History  HistoryCmd  `cmd:"" help:"Show or manage post history."`
+	Guide    GuideCmd    `cmd:"" help:"Print the posting guide — designed for LLM agents to learn how to compose posts."`
 }
 
 func main() {

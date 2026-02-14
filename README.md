@@ -23,91 +23,145 @@ make build
 
 ## Setup
 
-Run the interactive setup to configure your Slack webhook:
+Run the interactive setup to configure your Slack webhook, schedule, and background timer:
 
 ```bash
 slack-social-ai init
 ```
 
-This walks you through creating a Slack app, generating a manifest, and storing the webhook URL in your macOS Keychain.
+This walks you through creating a Slack app, generating a manifest, storing the webhook URL in your macOS Keychain, and optionally enabling automatic publishing.
 
 If you already have a webhook URL:
 
 ```bash
-slack-social-ai init "https://hooks.slack.com/services/T.../B.../xxx"
+slack-social-ai auth login "https://hooks.slack.com/services/T.../B.../xxx"
 ```
 
 ## Using with AI Coding Agents
 
-The primary workflow for `slack-social-ai` is pairing it with an AI coding agent. The `guide` command outputs an LLM-optimized posting guide. When possible, load it directly into the agent's prompt via shell substitution `$(slack-social-ai guide)` so the agent has the full guide in context without needing to run a command.
+The primary workflow for `slack-social-ai` is pairing it with an AI coding agent. Both modes below use the queue + schedule system: posts queue up, and the scheduler publishes them during your active hours.
 
-### Non-interactive
+The `guide` command outputs an LLM-optimized posting guide. Load it directly into the agent's prompt via shell substitution `$(slack-social-ai guide)` so the agent has the full guide in context without needing to run a command.
 
-The agent gets the guide inlined via shell substitution and posts autonomously:
+### Human-in-the-loop (recommended starting point)
+
+You run an interactive session — the agent drafts options, you pick which to queue, and the scheduler publishes them gradually across the day. Best way to start: refine the agent's sense of your voice before going fully autonomous.
 
 ```bash
 # Claude Code
-claude "Follow this guide: $(slack-social-ai guide). Post an insight about what we worked on"
+claude "Follow this guide: $(slack-social-ai guide). Draft 3 options, let me pick."
 
 # OpenCode
-opencode "Follow this guide: $(slack-social-ai guide). Post an insight about what we worked on"
+opencode "Follow this guide: $(slack-social-ai guide). Draft 3 options, let me pick."
 ```
 
-### Interactive
+### Autonomous / fully agentic
 
-The agent proposes posts and asks you to pick before publishing:
+A cron job or daily session calls the agent. The agent creates a batch of posts based on recent work. Posts queue up, and the scheduler spreads them across the day.
 
 ```bash
-# Claude Code
-claude "Follow this guide: $(slack-social-ai guide). Show me the options, ask before you post"
+# Claude Code (non-interactive)
+claude -p "Follow this guide: $(slack-social-ai guide). Create 2-3 posts and queue them."
 
 # OpenCode
-opencode "Follow this guide: $(slack-social-ai guide). Show me the options, ask before you post"
+opencode "Follow this guide: $(slack-social-ai guide). Create 2-3 posts and queue them."
+```
+
+> **Tip**: Start with human-in-the-loop to build posting history. Once happy with quality, graduate to autonomous.
+
+## Scheduling
+
+By default, `post` adds messages to a queue. Configure when they get published:
+
+```bash
+slack-social-ai schedule set    # interactive setup
+slack-social-ai schedule status # check schedule + queue depth
+```
+
+To bypass the queue entirely:
+
+```bash
+slack-social-ai post "urgent" --now
+```
+
+## Automatic Publishing
+
+Enable automatic publishing with the background timer:
+
+```bash
+slack-social-ai schedule install   # install macOS launchd timer
+```
+
+This installs a macOS launchd timer at:
+
+    ~/Library/LaunchAgents/com.slack-social-ai.publish.plist
+
+The timer wakes every 10 minutes and runs `slack-social-ai publish --json`.
+All scheduling logic (hours, weekdays, frequency) is handled by Go code —
+launchd is just a dumb timer.
+
+### Logs
+
+    tail -f ~/.local/share/slack-social-ai/publish.log
+
+### Remove the timer
+
+```bash
+slack-social-ai schedule uninstall
 ```
 
 ### What happens under the hood
 
 1. `$(slack-social-ai guide)` inlines the full posting guide directly into the agent's prompt
 2. The agent runs `slack-social-ai history` to check recent posts and avoid repeats
-3. The agent gathers context from session history, memory, and recent skills
-4. The agent drafts posts that fit the channel's voice -- concise, opinionated, technically precise
-5. **Interactive**: the agent proposes options and waits for you to pick one
-6. **Non-interactive**: the agent picks the best option and posts autonomously
-7. The agent runs `slack-social-ai post "..."` to publish
+3. The agent gathers context from session history, memory, and recent work
+4. The agent drafts posts that fit the channel's voice — concise, opinionated, technically precise
+5. **Human-in-the-loop**: the agent proposes options and waits for you to pick
+6. **Autonomous**: the agent picks the best option and queues autonomously
+7. The agent runs `slack-social-ai post "..."` to queue the message
+8. The publish scheduler sends queued posts during active hours
 
 ## CLI Reference
 
-| Command | Description |
-|---------|-------------|
-| `init [<webhook-url>]` | Configure Slack webhook (interactive or direct) |
-| `post [<message>]` | Post a message to Slack |
-| `history [--clear]` | Show or manage post history |
-| `guide` | Print the posting guide (for LLM agents) |
-
 ```bash
-# Inline the guide into an agent prompt
-claude "Follow this guide: $(slack-social-ai guide)"
+# Setup
+slack-social-ai init                   # first-run wizard (auth + schedule + timer)
+slack-social-ai auth login             # configure webhook (interactive or URL argument)
+slack-social-ai auth status            # check webhook configuration
+slack-social-ai auth status --verify   # silently verify webhook (no message sent)
+slack-social-ai auth logout            # remove webhook credentials
 
-# Post a message
-slack-social-ai post "your insight here"
+# Posting
+slack-social-ai post "message"         # queue a message
+slack-social-ai post "urgent" --now    # publish immediately
+slack-social-ai post "draft" -n        # dry-run preview
+slack-social-ai post "later" --at 2h   # schedule for a future time
 
-# Check history
-slack-social-ai history
+# Queue management
+slack-social-ai queue                  # show queue with predicted publish times
+slack-social-ai queue inspect          # interactive queue browser with detail pane
+slack-social-ai queue remove <id>      # remove a queued message
 
-# JSON output for scripts
-slack-social-ai post "deploy completed" --json
+# Publishing
+slack-social-ai publish                # publish next queued message (scheduler)
+
+# Schedule
+slack-social-ai schedule set           # configure schedule (interactive)
+slack-social-ai schedule status        # show schedule + timer status + queue depth
+slack-social-ai schedule install       # install background timer
+slack-social-ai schedule uninstall     # remove background timer
+
+# Other
+slack-social-ai history                # show post history
+slack-social-ai guide                  # print the posting guide (for LLM agents)
 ```
 
-| Flag | Short | Scope | Description |
-|------|-------|-------|-------------|
-| `--json` | `-j` | Global | JSON output for LLM/script consumption |
-| `--code` | `-c` | `post` | Wrap message in a code block |
-| `--stdin` | | `post` | Force reading from stdin |
-| `--clear` | | `history` | Clear all history |
+Use `--help` on any command for full flag details (e.g. `slack-social-ai post --help`).
+
+All commands support `--json` / `-j` for machine-readable output.
 
 ## Coming Soon
 
-- **Scheduled posts** -- configure recurring posts (daily/weekly) so your agent automatically shares insights on a cadence
 - **Multi-channel support** -- post to different Slack channels from the same CLI
 - **Block Kit formatting** -- rich message layouts with headers, dividers, and context blocks
 
@@ -116,8 +170,9 @@ slack-social-ai post "deploy completed" --json
 - **Secrets**: Webhook URL is stored in macOS Keychain via [go-keyring](https://github.com/zalando/go-keyring)
 - **Slack API**: Posts via [incoming webhooks](https://api.slack.com/messaging/webhooks) (no bot token needed)
 - **CLI**: Built with [Kong](https://github.com/alecthomas/kong)
-- **Interactive UI**: Powered by [huh](https://github.com/charmbracelet/huh)
+- **Interactive UI**: Powered by [huh](https://github.com/charmbracelet/huh) and [Bubble Tea](https://github.com/charmbracelet/bubbletea)
 - **Posting guide**: Embedded in the binary via `go:embed` -- no external files needed at runtime
+- **mrkdwn rendering**: Queue inspect detail pane renders Slack mrkdwn via [glamour](https://github.com/charmbracelet/glamour)
 
 ## Development
 
