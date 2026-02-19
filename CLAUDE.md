@@ -59,7 +59,7 @@ Commands are Kong subcommands. Each is a struct with a `Run(globals *Globals) er
 
 **Dual output**: Every command must respect `globals.JSON`. Success to stdout, errors to stderr.
 
-**`go:embed` posting guide** (guide.go): `slack-social-ai.guide.md` is embedded at compile time. The `guide` subcommand prints this guide. Changes require rebuild.
+**`go:embed` posting guide** (guide.go): `slack-social-ai.guide.md` is embedded at compile time. The `guide` subcommand prints this guide. Changes require rebuild. At runtime, `guide.go` also loads optional `~/.config/slack-social-ai/persona.md` and appends it to the guide output as a persona overlay (voice/tone customization).
 
 **Queue-first posting**: `post` queues by default. `post --now` publishes immediately. `publish` is the scheduler processor.
 

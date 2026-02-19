@@ -27,6 +27,11 @@ func configPath() string {
 	return filepath.Join(configDir(), "config.json")
 }
 
+// ConfigDir returns the config directory path.
+func ConfigDir() string {
+	return configDir()
+}
+
 // Exists returns true if a config file has been saved.
 func Exists() bool {
 	_, err := os.Stat(configPath())
